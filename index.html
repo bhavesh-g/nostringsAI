@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>No Strings AI</title>
+  <script src="https://js.puter.com/v2/"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background: #fff;
+      color: #111;
+      height: 100%;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 1rem;
+      font-weight: 300;
+      margin-bottom: 2rem;
+      text-align: center;
+      color: #555;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+      flex: 1 0 auto;
+    }
+    select, input, button {
+      font-family: inherit;
+      font-size: 1rem;
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #111;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button:hover:not(:disabled) {
+      background-color: #333;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .spinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      margin-left: 8px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    .output-container {
+      display: none; /* Hidden initially */
+      max-height: 600px;
+      overflow-y: auto;
+      margin-top: 2rem;
+      padding: 0.8rem 1rem;
+      border: 0.5rem solid #eee;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #fafafa;
+      box-sizing: border-box;
+      scroll-padding-top: 3rem; /* Helps fix scroll cutting off heading */
+    }
+    .output-container.highlight {
+      background-color: #fff8dc;
+      transition: background-color 0.3s ease;
+    }
+    .copy-container {
+      display: none; /* Hidden initially */
+      margin-top: 0.5rem;
+      text-align: right;
+    }
+    .copy-btn {
+      background-color: #111;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.3s;
+    }
+    .copy-btn:hover {
+      background-color: #333;
+    }
+    footer {
+      margin-top: auto;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #aaa;
+      padding: 1rem 0;
+    }
+    footer a {
+      color: #aaa;
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+    optgroup {
+      font-weight: 600;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>No Strings AI</h1>
+    <p class="subtitle">One Shot. Ask anything...</p>
+    <select id="model" aria-label="Choose AI model">
+      <!-- Options added by JS -->
+    </select>
+    <input type="text" id="question" placeholder="haanji ?" aria-label="Enter your question" />
+    <button id="askBtn" onclick="askAI()" aria-live="polite" aria-busy="false">Get Answer</button>
+
+    <div class="output-container" id="output" tabindex="0" aria-live="polite" aria-atomic="false" aria-relevant="additions"></div>
+
+    <div class="copy-container" id="copyContainer">
+      <button class="copy-btn" id="copyBtn" onclick="copyResponse()">Copy Response</button>
+    </div>
+  </div>
+  <footer>
+    Vibe coded by <a href="https://www.linkedin.com/in/mebhaveshg" target="_blank" rel="noopener noreferrer">Bhavesh</a> &nbsp;&nbsp;|&nbsp;&nbsp;<br> No login. No credit card. No history.
+  </footer>
+
+  <script>
+    // Models grouped by provider
+    const groupedModels = {
+      "OpenAI GPT": [
+        "gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4.5-preview"
+      ],
+      "Puter Models": [
+        "o1", "o1-mini", "o1-pro", "o3", "o3-mini", "o4-mini"
+      ],
+      "Anthropic Claude": [
+        "claude-sonnet-4", "claude-opus-4", "claude-3-7-sonnet", "claude-3-5-sonnet"
+      ],
+      "DeepSeek": [
+        "deepseek-chat", "deepseek-reasoner"
+      ],
+      "Google": [
+        "google/gemma-2-27b-it"
+      ],
+      "Meta Llama": [
+        "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
+      ],
+      "Other": [
+        "gemini-2.0-flash", "gemini-1.5-flash", "mistral-large-latest", "pixtral-large-latest", "codestral-latest", "grok-beta"
+      ]
+    };
+
+    const select = document.getElementById("model");
+
+    // Utility to clean display names
+    function modelDisplayName(id) {
+      if (id.includes("Meta-Llama")) return id.split("/")[1].replaceAll("-", " ");
+      if (id.includes("gemma")) return "Gemma 2 27B";
+      if (id.includes("claude")) return id.replaceAll("-", " ");
+      if (id.includes("gpt-4")) return id.replaceAll("-", " ");
+      return id.replaceAll("-", " ");
+    }
+
+    // Populate select grouped by provider
+    for (const provider in groupedModels) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = provider;
+
+      groupedModels[provider].forEach(model => {
+        const opt = document.createElement("option");
+        opt.value = model;
+        opt.textContent = modelDisplayName(model);
+        optgroup.appendChild(opt);
+      });
+
+      select.appendChild(optgroup);
+    }
+
+    // Enhance with Choices.js
+    const choices = new Choices('#model', {
+      searchEnabled: true,
+      searchFields: ['label', 'value'],
+      itemSelectText: '',
+      shouldSort: false,
+      placeholder: true,
+      searchResultLimit: 10
+    });
+
+    // Rate limiting config
+    const RATE_LIMIT_MAX = 3;    // max requests
+    const RATE_LIMIT_HOURS = 1;  // per this many hours
+    const STORAGE_KEY = 'noStringsAiRequests';
+
+    // Check if user can ask question
+    function canAsk() {
+      const now = Date.now();
+      let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+      // Remove expired timestamps
+      data = data.filter(ts => now - ts < RATE_LIMIT_HOURS * 3600 * 1000);
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+      return data.length < RATE_LIMIT_MAX;
+    }
+
+    // Log a request timestamp
+    function logRequest() {
+      const now = Date.now();
+      let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      data.push(now);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Show modal alert to clear cache if over limit
+    function showLimitModal() {
+      alert("You have reached the request limit. Please clear your browser cache and storage to renew your limit.");
+    }
+
+    // Minimal Markdown renderer: converts basic markdown to HTML (bold, italic, code, links)
+    function renderMarkdown(text) {
+      if (!text) return '';
+
+      // Escape HTML
+      const escapeHtml = (str) =>
+        str.replace(/[&<>"']/g, (m) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m]));
+
+      // Very basic markdown replacements
+      let html = escapeHtml(text);
+
+      // Bold **text**
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      // Italic *text*
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      // Inline code `code`
+      html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+
+      // Links [text](url)
+      html = html.replace(/([^]+)([^)]+)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+      // Line breaks
+      html = html.replace(/\n/g, '<br>');
+
+      return html;
+    }
+
+    // Copy the output text (plain, markdown source) to clipboard
+    function copyResponse() {
+      const output = document.getElementById('output');
+      // Copy plain text (not HTML)
+      navigator.clipboard.writeText(output.textContent.trim()).then(() => {
+        alert('Response copied to clipboard!');
+      }).catch(() => {
+        alert('Failed to copy, please try manually.');
+      });
+    }
+
+    // Main ask function
+    async function askAI() {
+      const questionInput = document.getElementById('question');
+      const question = questionInput.value.trim();
+      const model = document.getElementById('model').value;
+      const output = document.getElementById('output');
+      const askBtn = document.getElementById('askBtn');
+      const copyContainer = document.getElementById('copyContainer');
+
+      if (!question) return;
+
+      if (!canAsk()) {
+        showLimitModal();
+        return;
+      }
+
+      // Show output container immediately, clear content
+      output.style.display = 'block';
+      output.innerHTML = '';
+      output.classList.add('highlight');
+
+      // Hide copy button container during streaming
+      copyContainer.style.display = 'none';
+
+      askBtn.disabled = true;
+      askBtn.setAttribute('aria-busy', 'true');
+      askBtn.innerHTML = 'Loading <span class="spinner" aria-hidden="true"></span>';
+
+      logRequest();
+
+      try {
+        const resp = await puter.ai.chat(question, { model, stream: true });
+
+        for await (const part of resp) {
+          const text = part?.text || '';
+          // Append new text while rendering markdown freshly for entire content to avoid broken tags
+          output.innerHTML = renderMarkdown(output.textContent + text);
+          // Scroll to bottom smoothly
+          output.scrollTo({ top: output.scrollHeight, behavior: 'smooth' });
+        }
+
+        // After streaming ends, show copy button
+        copyContainer.style.display = 'block';
+      } catch (e) {
+        output.innerHTML = 'Error: ' + e.message;
+      }
+
+      output.classList.remove('highlight');
+
+      askBtn.disabled = false;
+      askBtn.setAttribute('aria-busy', 'false');
+      askBtn.textContent = 'Get Answer';
+    }
+  </script>
+</body>
+</html>
